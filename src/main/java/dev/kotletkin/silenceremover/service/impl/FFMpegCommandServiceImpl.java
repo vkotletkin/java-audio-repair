@@ -1,6 +1,6 @@
 package dev.kotletkin.silenceremover.service.impl;
 
-import dev.kotletkin.silenceremover.dto.AudioProcessingParams;
+import dev.kotletkin.silenceremover.exception.FileProcessingException;
 import dev.kotletkin.silenceremover.service.AudioCommandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -20,10 +21,12 @@ public class FFMpegCommandServiceImpl implements AudioCommandService {
     private final FileStorageService fileStorageService;
 
     @Override
-    public byte[] processWavAudio(MultipartFile audioFile, AudioProcessingParams params) {
+    public byte[] processWavAudio(MultipartFile audioFile) {
         FileStorageService.FileSaveResult fileSaveResult = fileStorageService.saveFile(audioFile);
-        String processedFilename = processCommand(Path.of(fileSaveResult.filePath()));
-        return fileStorageService.readFileToByteArray(processedFilename);
+        String processedFilePath = processCommand(Path.of(fileSaveResult.filePath()));
+        byte[] processedWavBytes = fileStorageService.readFileToByteArray(processedFilePath);
+        fileStorageService.deleteFile(List.of(fileSaveResult.filePath(), processedFilePath));
+        return processedWavBytes;
     }
 
     private String processCommand(Path filepath) {
@@ -50,11 +53,10 @@ public class FFMpegCommandServiceImpl implements AudioCommandService {
             if (exitCode == 0) {
                 return newPath.toString();
             } else {
-                throw new RuntimeException("problema s command"); // todo exception with process
+                throw new FileProcessingException("Код обработки аудио некорректен");
             }
         } catch (IOException | InterruptedException e) {
-            throw new RuntimeException(e); // todo exception with process
+            throw new FileProcessingException("Возникли проблемы с выполнением обработки аудио");
         }
     }
-
 }

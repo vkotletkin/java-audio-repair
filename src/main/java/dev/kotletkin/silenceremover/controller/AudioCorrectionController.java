@@ -1,6 +1,5 @@
 package dev.kotletkin.silenceremover.controller;
 
-import dev.kotletkin.silenceremover.dto.AudioProcessingParams;
 import dev.kotletkin.silenceremover.service.AudioCommandService;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +30,7 @@ public class AudioCorrectionController {
     public ResponseEntity<Resource> processAudio(@Parameter(description = "WAV audio file to process")
                                                  @RequestParam("file") MultipartFile file) {
 
-        byte[] processedWavData = audioService.processWavAudio(file, new AudioProcessingParams());
+        byte[] processedWavData = audioService.processWavAudio(file);
         Resource resource = createByteArrayResource(processedWavData);
 
         return ResponseEntity.ok()
@@ -48,7 +47,7 @@ public class AudioCorrectionController {
         return new ByteArrayResource(processedWavData) {
             @Override
             public String getFilename() {
-                return "processed_audio_" + System.currentTimeMillis() + ".wav";
+                return "processed_" + System.currentTimeMillis() + ".wav";
             }
         };
     }

@@ -1,5 +1,6 @@
 package dev.kotletkin.silenceremover.service.impl;
 
+import dev.kotletkin.silenceremover.exception.FileOperationException;
 import dev.kotletkin.silenceremover.exception.FileValidationException;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -37,10 +39,19 @@ public class FileStorageService {
         try {
             long fileSize = saveFileToDisk(multipartFile, targetPath);
             return new FileSaveResult(safeFilename, targetPath.toString(), fileSize);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (IOException _) {
+            throw new FileOperationException("Возникли проблемы с сохранением файла");
         }
 
+    }
+
+
+    public void deleteFile(List<String> paths) {
+        try {
+            for (String path : paths) Files.delete(Path.of(path));
+        } catch (IOException _) {
+            throw new FileOperationException("Возникли проблемы с удалением файла");
+        }
     }
 
     public byte[] readFileToByteArray(String filePath) {
@@ -49,12 +60,12 @@ public class FileStorageService {
             Path path = Path.of(filePath);
 
             if (!Files.exists(path)) {
-                throw new FileValidationException("File not found: " + filePath);
+                throw new FileOperationException("Файл не найден: {0}", filePath);
             }
 
             return Files.readAllBytes(path);
-        } catch (IOException e) {
-            throw new RuntimeException("problema s read to array");
+        } catch (IOException _) {
+            throw new FileOperationException("Возникли проблемы с чтением файла");
         }
     }
 
@@ -68,20 +79,20 @@ public class FileStorageService {
 
             // Проверяем права на запись
             if (!Files.isWritable(TMP_DIRECTORY)) {
-                throw new IOException("Upload directory is not writable: " + TMP_DIRECTORY);
+                throw new FileOperationException("Директория для загрузки не доступна для чтения");
             }
 
-            log.info("Upload directory is ready: {}", TMP_DIRECTORY);
+            log.info("Директория для загрузки файлов создана: {}", TMP_DIRECTORY);
 
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to initialize upload directory: " + TMP_DIRECTORY, e);
+        } catch (IOException _) {
+            throw new FileOperationException("Ошибка при инициализации директории: {0}", TMP_DIRECTORY);
         }
     }
 
     private void validateFile(MultipartFile file) {
 
         if (file.isEmpty()) {
-            throw new FileValidationException("File is empty");
+            throw new FileValidationException("WAV-файл пуст");
         }
 
         if (file.getSize() > WAV_MAX_SIZE_BYTES) {
@@ -124,7 +135,7 @@ public class FileStorageService {
     private String generateSecureFilename(String originalFilename) {
         String extension = getFileExtension(originalFilename);
         String baseName = UUID.randomUUID().toString();
-        return extension != null ? baseName + "." + extension : baseName;
+        return baseName + "." + extension;
     }
 
     private long saveFileToDisk(MultipartFile file, Path targetPath) throws IOException {
