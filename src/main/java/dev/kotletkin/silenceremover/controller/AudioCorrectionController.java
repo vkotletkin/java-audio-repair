@@ -3,8 +3,6 @@ package dev.kotletkin.silenceremover.controller;
 import dev.kotletkin.silenceremover.dto.AudioProcessingParams;
 import dev.kotletkin.silenceremover.service.AudioCommandService;
 import io.swagger.v3.oas.annotations.Parameter;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.apache.hc.core5.http.HttpHeaders;
 import org.springframework.core.io.ByteArrayResource;
@@ -30,17 +28,8 @@ public class AudioCorrectionController {
     private final AudioCommandService audioService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<Resource> processAudio(
-
-            @Parameter(description = "Noise Floor TODO", example = "-30")
-            @RequestParam(defaultValue = "-30") @Min(-110) @Max(110) byte noiseFloor,
-
-            @RequestParam(defaultValue = "-30") @Min(0) @Max(1) byte trackingNoiseEnabled,
-
-            @Parameter(description = "WAV audio file to process")
-            @RequestParam("file") MultipartFile file) {
-
-
+    public ResponseEntity<Resource> processAudio(@Parameter(description = "WAV audio file to process")
+                                                 @RequestParam("file") MultipartFile file) {
 
         byte[] processedWavData = audioService.processWavAudio(file, new AudioProcessingParams());
         Resource resource = createByteArrayResource(processedWavData);
@@ -49,7 +38,7 @@ public class AudioCorrectionController {
                 .contentType(AUDIO_WAV_MEDIATYPE)
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.attachment()
-                                .filename(resource.getFilename())
+                                .filename("processed_" + file.getOriginalFilename())
                                 .build()
                                 .toString())
                 .body(resource);
