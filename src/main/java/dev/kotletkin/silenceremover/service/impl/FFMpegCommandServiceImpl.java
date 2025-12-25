@@ -89,15 +89,15 @@ public class FFMpegCommandServiceImpl implements AudioCommandService {
             if (exitCode == 0) {
                 return newPath.toString();
             } else {
-                throw new FileProcessingException("Код обработки аудио некорректен");
+                throw new FileProcessingException("The audio processing code is incorrect");
             }
         } catch (IOException | InterruptedException e) {
-            throw new FileProcessingException("Возникли проблемы с выполнением обработки аудио");
+            throw new FileProcessingException("Problems with audio processing");
         }
     }
 
     private Path generateNewPath(Path filepath) {
-        String fileName = filepath.getFileName().toString().replace(".wav", PROCESSED_POSTFIX + ".wav");
+        String fileName = filepath.getFileName().toString().replace(".wav", PROCESSED_POSTFIX + ".wav"); // TODO FIX
         return filepath.resolveSibling(fileName);
     }
 }
