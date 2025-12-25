@@ -5,7 +5,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface AudioCommandService {
 
-    Resource processWavAudio(MultipartFile audioFile);
+    Resource upWavQuality(MultipartFile audioFile);
 
-    byte[] convertPcmToWav(MultipartFile pcmFile);
+    Resource convertPcmToWav(MultipartFile pcmFile, int audioRate, byte channelCount);
 }

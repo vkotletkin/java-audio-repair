@@ -4,6 +4,7 @@ import dev.kotletkin.silenceremover.exception.FileProcessingException;
 import dev.kotletkin.silenceremover.service.AudioCommandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -22,23 +23,48 @@ public class FFMpegCommandServiceImpl implements AudioCommandService {
     private final FileStorageService fileStorageService;
 
     @Override
-    public Resource processWavAudio(MultipartFile audioFile) {
+    public Resource upWavQuality(MultipartFile audioFile) {
 
         FileStorageService.FileSaveResult fileSaveResult = fileStorageService.saveFile(audioFile);
+        Path filepath = Path.of(fileSaveResult.filePath());
 
-        String processedFilePath = processCommand(Path.of(fileSaveResult.filePath()));
+        String processedFilePath = upWavQualityCommand(filepath);
+
         return new FileSystemResource(processedFilePath);
     }
 
     @Override
-    public byte[] convertPcmToWav(MultipartFile pcmFile) {
-        return new byte[0];
+    public Resource convertPcmToWav(MultipartFile pcmFile, int audioRate, byte channelCount) {
+
+        FileStorageService.FileSaveResult fileSaveResult = fileStorageService.saveFile(pcmFile);
+        Path filepath = Path.of(fileSaveResult.filePath());
+
+        String processedFilePath = pcmToWavCommand(filepath, audioRate, channelCount);
+
+        return new FileSystemResource(processedFilePath);
     }
 
-    private String processCommand(Path filepath) {
+    private String pcmToWavCommand(Path filepath, int audioRate, byte channelCount) {
 
-        String fileName = filepath.getFileName().toString().replace(".wav", PROCESSED_POSTFIX + ".wav");
-        Path newPath = filepath.resolveSibling(fileName);
+        Path newPath = generateNewPath(filepath);
+
+        ProcessBuilder pb = new ProcessBuilder(
+                "ffmpeg",
+                "-i", filepath.toString(),
+                "-f", "s16le",
+                "-ar", String.valueOf(audioRate),
+                "-ac", String.valueOf(channelCount),
+                newPath.toString(),
+                "-y"
+        );
+
+        return executeCommandMethod(newPath, pb);
+    }
+
+
+    private String upWavQualityCommand(Path filepath) {
+
+        Path newPath = generateNewPath(filepath);
 
         ProcessBuilder pb = new ProcessBuilder(
                 "ffmpeg",
@@ -50,6 +76,10 @@ public class FFMpegCommandServiceImpl implements AudioCommandService {
                 "-y"
         );
 
+        return executeCommandMethod(newPath, pb);
+    }
+
+    private @NonNull String executeCommandMethod(Path newPath, ProcessBuilder pb) {
         try {
             String command = String.join(" ", pb.command());
             log.info(command);
@@ -64,5 +94,10 @@ public class FFMpegCommandServiceImpl implements AudioCommandService {
         } catch (IOException | InterruptedException e) {
             throw new FileProcessingException("Возникли проблемы с выполнением обработки аудио");
         }
+    }
+
+    private Path generateNewPath(Path filepath) {
+        String fileName = filepath.getFileName().toString().replace(".wav", PROCESSED_POSTFIX + ".wav");
+        return filepath.resolveSibling(fileName);
     }
 }

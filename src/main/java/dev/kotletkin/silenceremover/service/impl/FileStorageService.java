@@ -21,8 +21,7 @@ import java.util.UUID;
 public class FileStorageService {
 
     private static final Path TMP_DIRECTORY = Path.of("./tmp");
-    private static final int WAV_MAX_SIZE_BYTES = 419430400;
-    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("wav");
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("wav", "pcm");
 
     @PostConstruct
     public void init() {
@@ -40,32 +39,16 @@ public class FileStorageService {
             long fileSize = saveFileToDisk(multipartFile, targetPath);
             return new FileSaveResult(safeFilename, targetPath.toString(), fileSize);
         } catch (IOException _) {
-            throw new FileOperationException("Возникли проблемы с сохранением файла");
+            throw new FileOperationException("Problems saving the file");
         }
 
     }
-
 
     public void deleteFile(List<String> paths) {
         try {
             for (String path : paths) Files.delete(Path.of(path));
         } catch (IOException _) {
-            throw new FileOperationException("Возникли проблемы с удалением файла");
-        }
-    }
-
-    public byte[] readFileToByteArray(String filePath) {
-
-        try {
-            Path path = Path.of(filePath);
-
-            if (!Files.exists(path)) {
-                throw new FileOperationException("Файл не найден: {0}", filePath);
-            }
-
-            return Files.readAllBytes(path);
-        } catch (IOException _) {
-            throw new FileOperationException("Возникли проблемы с чтением файла");
+            throw new FileOperationException("Problems deleting the file");
         }
     }
 
@@ -77,26 +60,19 @@ public class FileStorageService {
                 log.info("Created upload directory: {}", TMP_DIRECTORY);
             }
 
-            // Проверяем права на запись
             if (!Files.isWritable(TMP_DIRECTORY)) {
-                throw new FileOperationException("Директория для загрузки не доступна для чтения");
+                throw new FileOperationException("The download directory is not writable");
             }
-
-            log.info("Директория для загрузки файлов создана: {}", TMP_DIRECTORY);
-
+            log.info("The file upload directory has been created: {}", TMP_DIRECTORY);
         } catch (IOException _) {
-            throw new FileOperationException("Ошибка при инициализации директории: {0}", TMP_DIRECTORY);
+            throw new FileOperationException("Error initializing the directory: {0}", TMP_DIRECTORY);
         }
     }
 
     private void validateFile(MultipartFile file) {
 
         if (file.isEmpty()) {
-            throw new FileValidationException("WAV-файл пуст");
-        }
-
-        if (file.getSize() > WAV_MAX_SIZE_BYTES) {
-            throw new FileValidationException("File size exceeds limit: " + WAV_MAX_SIZE_BYTES + " bytes");
+            throw new FileValidationException("The file is empty");
         }
 
         String originalFilename = file.getOriginalFilename();
@@ -104,31 +80,11 @@ public class FileStorageService {
             throw new FileValidationException("Invalid filename");
         }
 
-        // Проверка расширения файла
         if (!ALLOWED_EXTENSIONS.isEmpty()) {
             String extension = getFileExtension(originalFilename).toLowerCase();
             if (!ALLOWED_EXTENSIONS.contains(extension)) {
                 throw new FileValidationException("File type not allowed. Allowed: " + ALLOWED_EXTENSIONS);
             }
-        }
-
-        // Дополнительная проверка для WAV файлов
-        if (!isValidWavFile(file)) {
-            throw new FileValidationException("Invalid WAV file");
-        }
-    }
-
-    private boolean isValidWavFile(MultipartFile file) {
-        try {
-            // Базовая проверка сигнатуры WAV файла
-            byte[] header = new byte[4];
-            try (InputStream is = file.getInputStream()) {
-                if (is.read(header) != 4) return false;
-            }
-            // Проверка на "RIFF" сигнатуру
-            return header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F';
-        } catch (IOException _) {
-            return false;
         }
     }
 
@@ -139,22 +95,18 @@ public class FileStorageService {
     }
 
     private long saveFileToDisk(MultipartFile file, Path targetPath) throws IOException {
-        // Используем временный файл для атомарности
+
         Path tempPath = targetPath.getParent().resolve(targetPath.getFileName() + ".tmp");
 
-        try {
-            // Копируем во временный файл
-            try (InputStream inputStream = file.getInputStream()) {
-                Files.copy(inputStream, tempPath, StandardCopyOption.REPLACE_EXISTING);
-            }
 
-            // Переименовываем в целевой файл (атомарная операция)
+        try (InputStream inputStream = file.getInputStream()) {
+
+            Files.copy(inputStream, tempPath, StandardCopyOption.REPLACE_EXISTING);
             Files.move(tempPath, targetPath, StandardCopyOption.ATOMIC_MOVE);
 
             return Files.size(targetPath);
 
         } finally {
-            // Удаляем временный файл, если он остался
             if (Files.exists(tempPath)) {
                 Files.deleteIfExists(tempPath);
             }
