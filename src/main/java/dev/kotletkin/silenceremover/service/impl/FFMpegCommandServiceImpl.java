@@ -97,7 +97,11 @@ public class FFMpegCommandServiceImpl implements AudioCommandService {
     }
 
     private Path generateNewPath(Path filepath) {
-        String fileName = filepath.getFileName().toString().replace(".wav", PROCESSED_POSTFIX + ".wav"); // TODO FIX
+        String fileName = filepath.getFileName().toString(); // TODO FIX
+        int dotIndex = fileName.lastIndexOf('.');
+        String nameWithoutExtension = (dotIndex == -1) ? fileName : fileName.substring(0, dotIndex);
+        String extension = (dotIndex == -1) ? "" : fileName.substring(dotIndex + 1);
+        fileName = nameWithoutExtension + PROCESSED_POSTFIX + "." + extension;
         return filepath.resolveSibling(fileName);
     }
 }

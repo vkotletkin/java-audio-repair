@@ -20,14 +20,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler
     public ErrorResponse handleFileValidationException(FileValidationException e) {
         log.error(e.getMessage());
-        return new ErrorResponse("Ошибка валидации файла", e.getMessage());
+        return new ErrorResponse("File validation error", e.getMessage());
     }
 
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler
     public ErrorResponse handleFileProcessingException(FileProcessingException e) {
         log.error(e.getMessage());
-        return new ErrorResponse("Ошибка обработки файла", e.getMessage());
+        return new ErrorResponse("File processing error", e.getMessage());
     }
 
     @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
