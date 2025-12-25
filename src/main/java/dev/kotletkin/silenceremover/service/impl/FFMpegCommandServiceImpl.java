@@ -4,12 +4,13 @@ import dev.kotletkin.silenceremover.exception.FileProcessingException;
 import dev.kotletkin.silenceremover.service.AudioCommandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -21,12 +22,17 @@ public class FFMpegCommandServiceImpl implements AudioCommandService {
     private final FileStorageService fileStorageService;
 
     @Override
-    public byte[] processWavAudio(MultipartFile audioFile) {
+    public Resource processWavAudio(MultipartFile audioFile) {
+
         FileStorageService.FileSaveResult fileSaveResult = fileStorageService.saveFile(audioFile);
+
         String processedFilePath = processCommand(Path.of(fileSaveResult.filePath()));
-        byte[] processedWavBytes = fileStorageService.readFileToByteArray(processedFilePath);
-        fileStorageService.deleteFile(List.of(fileSaveResult.filePath(), processedFilePath));
-        return processedWavBytes;
+        return new FileSystemResource(processedFilePath);
+    }
+
+    @Override
+    public byte[] convertPcmToWav(MultipartFile pcmFile) {
+        return new byte[0];
     }
 
     private String processCommand(Path filepath) {

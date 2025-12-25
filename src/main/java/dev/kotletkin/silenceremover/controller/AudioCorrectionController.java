@@ -4,7 +4,6 @@ import dev.kotletkin.silenceremover.service.AudioCommandService;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.apache.hc.core5.http.HttpHeaders;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
@@ -30,8 +29,7 @@ public class AudioCorrectionController {
     public ResponseEntity<Resource> processAudio(@Parameter(description = "WAV audio file to process")
                                                  @RequestParam("file") MultipartFile file) {
 
-        byte[] processedWavData = audioService.processWavAudio(file);
-        Resource resource = createByteArrayResource(processedWavData);
+        Resource resource = audioService.processWavAudio(file);
 
         return ResponseEntity.ok()
                 .contentType(AUDIO_WAV_MEDIATYPE)
@@ -41,14 +39,5 @@ public class AudioCorrectionController {
                                 .build()
                                 .toString())
                 .body(resource);
-    }
-
-    private Resource createByteArrayResource(byte[] processedWavData) {
-        return new ByteArrayResource(processedWavData) {
-            @Override
-            public String getFilename() {
-                return "processed_" + System.currentTimeMillis() + ".wav";
-            }
-        };
     }
 }
